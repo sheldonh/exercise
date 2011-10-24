@@ -1,5 +1,5 @@
 # Represents a programming exercise, composed of string representations of code that sets up a starting context and defines
-# a final goal, and allows candidate solutions to the problem to be tested with with #solve method.
+# a final goal, and allows candidate solutions to the problem to be tested with the #solve method.
 #
 # For example:
 #
@@ -26,6 +26,7 @@ class Exercise
   #     }
   #   end
   def initialize(*args)
+    @error = nil
     if block_given?
       yield self
     else
@@ -50,17 +51,29 @@ class Exercise
   end
 
   # Takes a string representation of code that provides a candidate solution, then evaluates the context, solution and goal
-  # code (in that order) in a high safety level thread and returns true if the goal was achieved. If any evaluated code raises
-  # an exception, false is returned. In other words, the cause of failure is completely opaque to the caller.
+  # code (in that order) in a high safety level thread and returns true if the goal was achieved or false otherwise. If any
+  # evaluated code raises an exception, false is returned. In other words, the cause of failure is completely opaque to the caller.
   def solve(solution)
-    safety_thread { |scope| scope.eval "#{context}\n#{solution}\n#{goal}" }
-    rescue Exception
+    @error = nil
+    safety_thread do |scope|
+      scope.eval context
+      scope.eval solution
+      scope.eval goal
+    end
+    rescue Exception => e
+      @error = e
       false
+  end
+
+  # Returns the Exception raised by goal, context or solution code in the last call to #solve.  If #solve has not been called, or
+  # if no Exception was raised during the last call to #solve, returns nil.
+  def error
+    @error
   end
 
   private
 
-  # Creates a thread in which the Ruby $SAFE level is set to 4, inside which a tainted scope (binding) is passed into the given
+  # Creates a thread that runs at Ruby $SAFE level 4, inside which a tainted scope (binding) is passed into the given
   # block. This allows the block to evaluate code inside the scope, but still enforcing a high safety level on the evaluated
   # code itself. Returns the last expression evaluated in the block.
   def safety_thread(&block)

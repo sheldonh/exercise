@@ -81,4 +81,23 @@ describe Exercise do
       exercise.solve('@goal = "true"').should be_false
     end
   end
+
+  describe "#error" do
+    it "returns nil if #solve has not been called" do
+      exercise = Exercise.new 'i = 1', 'i = 20'
+      exercise.error.should be_nil
+    end
+
+    it "returns nil if the last call to #solve did not raise an exception" do
+      exercise = Exercise.new 'i = 1', 'i = 20'
+      exercise.solve('i *= 20')
+      exercise.error.should be_nil
+    end
+
+    it "returns the exception that #solve raised if the last call to #solve raised an exception" do
+      exercise = Exercise.new 'i = 1', 'i = 20'
+      exercise.solve('raise ArgumentError')
+      exercise.error.should be_a(ArgumentError)
+    end
+  end
 end
